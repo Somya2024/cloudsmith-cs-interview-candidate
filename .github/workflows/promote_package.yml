@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Authenticate to Cloudsmith (OIDC)
-        uses: cloudsmith-io/cloudsmith-cli-action@v1
+        uses: cloudsmith-io/cloudsmith-cli-action@0.6.0
         with:
           oidc-namespace: ${{ secrets.CS_OIDC_NAMESPACE }}
           oidc-service-slug: ${{ secrets.CS_OIDC_SERVICE_SLUG }}
