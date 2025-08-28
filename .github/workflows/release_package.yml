@@ -1,57 +1,42 @@
-name: Publish Python Package
+name: Release to Cloudsmith (staging)
 
 on:
   workflow_run:
-    workflows: [ "Build Python Package" ]   # must match build workflow name exactly
-    types: [ completed ]
-    branches: [ main ]
-
-env:
-  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
-  CLOUDSMITH_REPOSITORY: "staging"
-  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
+    workflows: ["Build Python Package"]
+    types: [completed]
 
 permissions:
   contents: read
-  id-token: write   # required for OIDC
+  id-token: write        # OIDC to Cloudsmith
+  actions: read          # needed to read artifacts from another run
+
+env:
+  CS_NAMESPACE: ${{ secrets.CS_NAMESPACE }}
+  CS_STAGING_REPO: "staging"
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  release:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Download artifact from build run
+      - name: Download build artifact from triggering run
         uses: actions/download-artifact@v4
         with:
-          name: python-package                  # matches the artifact name from build
+          name: dist-artifact
           path: dist
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.token }}
-          repository: ${{ github.repository }}
-
-      - name: List built artifacts
-        run: ls -la dist/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Cloudsmith CLI (OIDC)
-        uses: cloudsmith-io/cloudsmith-cli-action@v1
+        uses: cloudsmith-io/cloudsmith-cli-action@v1.0.4
         with:
-          oidc: true
-          oidc-namespace: ${{ env.CLOUDSMITH_NAMESPACE }}
-          oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
+          oidc-namespace: ${{ env.CS_NAMESPACE }}
+          oidc-service-slug: ${{ secrets.CS_OIDC_SERVICE_SLUG }}
 
-      - name: Push package(s) to Cloudsmith (staging)
+      - name: Push Python package(s) to Cloudsmith staging
         run: |
-          set -euo pipefail
           shopt -s nullglob
-          FILES=(dist/*.whl dist/*.tar.gz)
-
-          if [ ${#FILES[@]} -eq 0 ]; then
-            echo "No .whl or .tar.gz found in dist/"
-            exit 1
-          fi
-
-          for f in "${FILES[@]}"; do
-            echo "Uploading $f"
-            cloudsmith push python "${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }}" "$f" --republish
+          for pkg in dist/*.whl dist/*.tar.gz; do
+            echo "Pushing $pkg"
+            cloudsmith push python "${CS_NAMESPACE}/${CS_STAGING_REPO}" "$pkg"
           done
