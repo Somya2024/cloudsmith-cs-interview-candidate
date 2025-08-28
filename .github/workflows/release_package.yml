@@ -3,27 +3,27 @@ name: Publish Python Package
 on:
   workflow_run:
     workflows: ["Build Python Package"]
-    types:
-      - completed
-    branches:
-      - main
+    types: [completed]
 
+# Use repo Variables (or switch to Secrets) set in Settings → Variables:
+# CLOUDSMITH_NAMESPACE = interview-somya-lavania
+# CLOUDSMITH_SERVICE_SLUG = gha-ci
 env:
   CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
-  CLOUDSMITH_REPOSITORY: "staging"
+  CLOUDSMITH_REPOSITORY: staging
   CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
 
 permissions:
   contents: read
-  actions: read
+  id-token: write          # REQUIRED for OIDC
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Download artifact
+      - name: Download artifact from Build
         uses: actions/download-artifact@v4
         with:
           name: python-package
@@ -32,17 +32,30 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.event.workflow_run.id }}
 
+      - name: List dist contents
+        run: ls -la dist
 
+      # Authenticate + install Cloudsmith CLI via OIDC (no API key needed)
+      - name: Cloudsmith OIDC
+        uses: cloudsmith-io/cloudsmith-cli-action@v1
+        with:
+          oidc-namespace: ${{ env.CLOUDSMITH_NAMESPACE }}
+          oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
 
-      - name: List directory contents
-        run: ls -la dist/
-        shell: bash
-
-      - name: Push package to Cloudsmith
+      # Push both sdist and wheel if present
+      - name: Push package(s) to Cloudsmith staging
         run: |
-          if ! ls dist/*.tar.gz 1> /dev/null 2>&1; then
-            echo "No package found to upload"
+          shopt -s nullglob
+          files=(dist/*.tar.gz dist/*.whl)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No build artifacts found in dist/"
             exit 1
           fi
-          cloudsmith push python ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }} dist/*.tar.gz --republish
-        shell: bash
+          echo "Uploading: ${files[@]}"
+          cloudsmith push python \
+            "${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }}" \
+            "${files[@]}" --republish
+
+      # Optional: prove we are authenticated
+      - name: Who am I
+        run: cloudsmith whoami
