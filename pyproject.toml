@@ -3,16 +3,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "dummy-package"                     # <-- Add this
-version = "0.1.0"                          # <-- Add this
-authors = [
-  { name="Somya Lavania", email="somyalavania3@gmail.com" }
-]
+name = "dummy-package"
+version = "0.1.0"                                # <-- static version
 description = "A dummy package for testing Cloudsmith upload"
 readme = "README.md"
 requires-python = ">=3.8"
+authors = [{ name = "Somya Lavania", email = "somyalavania3@gmail.com" }]
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]
+
+# DO NOT add [tool.hatch.version] or 'dynamic = ["version"]' below.
