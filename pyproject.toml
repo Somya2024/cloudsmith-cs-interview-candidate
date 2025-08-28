@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dummy-package"
-version = "0.1.0"                                # <-- static version
+version = "0.1.0"
 description = "A dummy package for testing Cloudsmith upload"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -15,4 +15,6 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 
-# DO NOT add [tool.hatch.version] or 'dynamic = ["version"]' below.
+[tool.hatch.build.targets.wheel]
+packages = ["src/dummy_package"]
+
