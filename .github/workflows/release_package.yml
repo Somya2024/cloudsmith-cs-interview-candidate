@@ -2,17 +2,17 @@ name: Publish Python Package
 
 on:
   workflow_run:
-    workflows: ["Build Python Package"]   # must match build workflow name exactly
+    workflows: ["Build Python Package"]
     types: [completed]
 
 env:
-  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}       # e.g. interview-somya-lavania
+  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}       # interview-somya-lavania
   CLOUDSMITH_REPOSITORY: staging
-  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }} # e.g. gha-ci
+  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }} # gha-ci
 
 permissions:
   contents: read
-  id-token: write   # REQUIRED for OIDC
+  id-token: write
 
 jobs:
   publish:
@@ -32,7 +32,7 @@ jobs:
         run: ls -la dist
 
       - name: Authenticate to Cloudsmith via OIDC
-        uses: cloudsmith-io/cloudsmith-cli-action@v1
+        uses: cloudsmith-io/cloudsmith-cli-action@main
         with:
           oidc-namespace: ${{ env.CLOUDSMITH_NAMESPACE }}
           oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
