@@ -2,26 +2,22 @@ name: Publish Python Package
 
 on:
   workflow_run:
-    workflows: ["Build Python Package"]
+    workflows: ["Build Python Package"]   # must match build workflow name exactly
     types: [completed]
 
-# Use repo Variables (or switch to Secrets) set in Settings → Variables:
-# CLOUDSMITH_NAMESPACE = interview-somya-lavania
-# CLOUDSMITH_SERVICE_SLUG = gha-ci
 env:
-  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
+  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}      # interview-somya-lavania
   CLOUDSMITH_REPOSITORY: staging
-  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
+  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }} # gha-ci
 
 permissions:
   contents: read
-  id-token: write          # REQUIRED for OIDC
+  id-token: write   # REQUIRED for OIDC
 
 jobs:
   publish:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-
     steps:
       - name: Download artifact from Build
         uses: actions/download-artifact@v4
@@ -35,15 +31,13 @@ jobs:
       - name: List dist contents
         run: ls -la dist
 
-      # Authenticate + install Cloudsmith CLI via OIDC (no API key needed)
-      - name: Cloudsmith OIDC
+      - name: Authenticate to Cloudsmith via OIDC
         uses: cloudsmith-io/cloudsmith-cli-action@v1
         with:
           oidc-namespace: ${{ env.CLOUDSMITH_NAMESPACE }}
           oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
 
-      # Push both sdist and wheel if present
-      - name: Push package(s) to Cloudsmith staging
+      - name: Push sdist and wheel to Cloudsmith (staging)
         run: |
           shopt -s nullglob
           files=(dist/*.tar.gz dist/*.whl)
@@ -55,7 +49,3 @@ jobs:
           cloudsmith push python \
             "${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }}" \
             "${files[@]}" --republish
-
-      # Optional: prove we are authenticated
-      - name: Who am I
-        run: cloudsmith whoami
