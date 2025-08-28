@@ -1,63 +1,41 @@
 name: Promote Python Package
 
 on:
-  repository_dispatch:
-    types: [package_synchronised]  # fired by Cloudsmith 'package.synced' webhook
+  workflow_dispatch:
+    inputs:
+      package_version:
+        description: "Package version to promote (e.g., 0.1.0)"
+        required: true
+        type: string
+
+env:
+  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
+  CLOUDSMITH_STAGING_REPO: "staging"         # staging → production
+  CLOUDSMITH_PRODUCTION_REPO: "production"
+  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
+  PACKAGE_NAME: "example-package"             # PEP 503 normalized name; change if different
 
 permissions:
   contents: read
-  id-token: write    # for Cloudsmith OIDC
-  actions: read
-
-env:
-  CS_NAMESPACE: ${{ secrets.CS_NAMESPACE }}
-  CS_STAGING_REPO: "staging"
-  CS_PROD_REPO: "production"
-  READY_TAG: "ready-for-production"
+  id-token: write
 
 jobs:
   promote:
     runs-on: ubuntu-latest
+
     steps:
       - name: Install Cloudsmith CLI (OIDC)
-        uses: cloudsmith-io/cloudsmith-cli-action@v1.0.3
+        uses: cloudsmith-io/cloudsmith-cli-action@v1
         with:
           oidc: true
+          oidc-namespace: ${{ env.CLOUDSMITH_NAMESPACE }}
+          oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
 
-      - name: Install jq (for JSON processing)
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Show webhook payload (debug)
+      - name: Promote from staging → production (copy, non-destructive)
         run: |
-          echo "slug=${{ github.event.client_payload.slug }}"
-          echo "name=${{ github.event.client_payload.name }}"
-          echo "version=${{ github.event.client_payload.version }}"
-          echo "format=${{ github.event.client_payload.format }}"
-
-      - name: Tag the synced package as ready-for-production
-        run: |
-          if [ -n "${{ github.event.client_payload.slug }}" ]; then
-            cloudsmith tags add \
-              "${CS_NAMESPACE}/${CS_STAGING_REPO}" \
-              "${{ github.event.client_payload.slug }}" \
-              "${READY_TAG}"
-          else
-            echo "No slug in payload; resolving by name/version..."
-            RESOLVED_SLUG=$(cloudsmith ls pkg "${CS_NAMESPACE}/${CS_STAGING_REPO}" -q "name:${{ github.event.client_payload.name }} AND version:${{ github.event.client_payload.version }}" -F json | jq -r '.data[0].slug')
-            if [ -z "$RESOLVED_SLUG" ] || [ "$RESOLVED_SLUG" = "null" ]; then
-              echo "Could not resolve package slug from payload"; exit 1
-            fi
-            cloudsmith tags add \
-              "${CS_NAMESPACE}/${CS_STAGING_REPO}" \
-              "$RESOLVED_SLUG" \
-              "${READY_TAG}"
-          fi
-
-      - name: Promote all 'ready-for-production' packages from staging → production
-        run: |
-          cloudsmith ls pkg "${CS_NAMESPACE}/${CS_STAGING_REPO}" -q "tag:${READY_TAG}" -F json \
-          | jq -r '.data[] | .namespace + "/" + .repository + "/" + .slug' \
-          | while read -r pkgref; do
-              echo "Promoting $pkgref → ${CS_PROD_REPO}"
-              cloudsmith move "$pkgref" "${CS_PROD_REPO}"
-            done
+          cloudsmith copy \
+            "${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }}" \
+            "${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_PRODUCTION_REPO }}" \
+            --package="${{ env.PACKAGE_NAME }}" \
+            --version="${{ inputs.package_version }}" \
+            --yes
