@@ -1,60 +1,38 @@
-name: Publish Python Package
+name: Release to Cloudsmith (staging)
 
 on:
   workflow_run:
-    workflows: ["Build Python Package"]   # must match the build workflow name exactly
+    workflows: ["Build Python Package"]
     types: [completed]
-
-# Hard-code to avoid variable mistakes
-env:
-  CLOUDSMITH_NAMESPACE: interview-somya-lavania
-  CLOUDSMITH_REPOSITORY: staging
-  CLOUDSMITH_SERVICE_SLUG: gha-ci
 
 permissions:
   contents: read
-  id-token: write   # REQUIRED for OIDC
+  id-token: write  # required for OIDC with Cloudsmith
+
+env:
+  CS_NAMESPACE: ${{ secrets.CS_NAMESPACE }}  # e.g. your-org (set as a repo secret)
+  CS_STAGING_REPO: "staging"
 
 jobs:
-  publish:
+  release:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-
     steps:
-      - name: Download artifact from Build
+      - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: python-package
+          name: dist-artifact
           path: dist
-          repository: ${{ github.repository }}
-          github-token: ${{ github.token }}
-          run-id: ${{ github.event.workflow_run.id }}
 
-      - name: List dist contents
-        run: ls -la dist || true
-
-      - name: Authenticate to Cloudsmith via OIDC
-        uses: cloudsmith-io/cloudsmith-cli-action@v1.0.3
+      - name: Install Cloudsmith CLI (OIDC)
+        uses: cloudsmith-io/cloudsmith-cli-action@v1
         with:
-          oidc-namespace: ${{ env.CLOUDSMITH_NAMESPACE }}
-          oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
+          oidc: true
 
-      - name: Show Cloudsmith identity (sanity check)
-        run: |
-          cloudsmith --version
-          cloudsmith whoami
-
-      - name: Push sdist and wheel to Cloudsmith (staging)
-        shell: bash
+      - name: Push Python package(s) to Cloudsmith staging
         run: |
           shopt -s nullglob
-          files=(dist/*.tar.gz dist/*.whl)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "No build artifacts found in dist/"
-            ls -la dist || true
-            exit 1
-          fi
-          echo "Uploading: ${files[@]}"
-          cloudsmith push python \
-            "${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }}" \
-            "${files[@]}" --republish
+          for pkg in dist/*.whl dist/*.tar.gz; do
+            echo "Pushing $pkg"
+            cloudsmith push python "${CS_NAMESPACE}/${CS_STAGING_REPO}" "$pkg"
+          done
