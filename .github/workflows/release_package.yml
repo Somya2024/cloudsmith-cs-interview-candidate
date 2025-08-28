@@ -5,7 +5,7 @@ on:
     workflows: ["Build Python Package"]   # must match the build workflow name exactly
     types: [completed]
 
-# Hard-code values to avoid repo-variable mistakes during the assessment
+# Hard-code to avoid variable mistakes
 env:
   CLOUDSMITH_NAMESPACE: interview-somya-lavania
   CLOUDSMITH_REPOSITORY: staging
@@ -33,7 +33,6 @@ jobs:
       - name: List dist contents
         run: ls -la dist || true
 
-      # Authenticate + install Cloudsmith CLI via OIDC (pin to a valid tag)
       - name: Authenticate to Cloudsmith via OIDC
         uses: cloudsmith-io/cloudsmith-cli-action@v1.0.3
         with:
