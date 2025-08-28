@@ -7,10 +7,11 @@ on:
 
 permissions:
   contents: read
-  id-token: write  # required for OIDC with Cloudsmith
+  id-token: write     # for OIDC to Cloudsmith
+  actions: read       # <-- needed to read artifacts from another run
 
 env:
-  CS_NAMESPACE: ${{ secrets.CS_NAMESPACE }}  # e.g. your-org (set as a repo secret)
+  CS_NAMESPACE: ${{ secrets.CS_NAMESPACE }}
   CS_STAGING_REPO: "staging"
 
 jobs:
@@ -18,16 +19,16 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Download build artifact
+      - name: Download build artifact from triggering run
         uses: actions/download-artifact@v4
         with:
-          name: dist-artifact
+          name: dist-artifact          # must match the name used in Build
           path: dist
+          run-id: ${{ github.event.workflow_run.id }}     # <-- key line
+          github-token: ${{ secrets.GITHUB_TOKEN }}       # uses repo GITHUB_TOKEN
 
       - name: Install Cloudsmith CLI (OIDC)
         uses: cloudsmith-io/cloudsmith-cli-action@v1.0.3
-        with:
-          oidc: true
 
       - name: Push Python package(s) to Cloudsmith staging
         run: |
