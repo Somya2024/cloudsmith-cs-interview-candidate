@@ -6,9 +6,9 @@ on:
     types: [completed]
 
 env:
-  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}      # interview-somya-lavania
+  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}       # e.g. interview-somya-lavania
   CLOUDSMITH_REPOSITORY: staging
-  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }} # gha-ci
+  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }} # e.g. gha-ci
 
 permissions:
   contents: read
@@ -38,6 +38,7 @@ jobs:
           oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
 
       - name: Push sdist and wheel to Cloudsmith (staging)
+        shell: bash
         run: |
           shopt -s nullglob
           files=(dist/*.tar.gz dist/*.whl)
