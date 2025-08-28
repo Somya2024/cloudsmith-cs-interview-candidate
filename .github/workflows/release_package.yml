@@ -25,7 +25,7 @@ jobs:
           path: dist
 
       - name: Install Cloudsmith CLI (OIDC)
-        uses: cloudsmith-io/cloudsmith-cli-action@v1
+        uses: cloudsmith-io/cloudsmith-cli-action@v1.0.3
         with:
           oidc: true
 
