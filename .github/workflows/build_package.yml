@@ -1,51 +1,35 @@
 name: Build Python Package
+
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Show repo layout
-        run: |
-          pwd
-          ls -R
-
-      - uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: "3.11"
 
-      - name: Install build tooling
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install --upgrade build setuptools wheel
+      - name: Install build backend
+        run: python -m pip install --upgrade pip build
 
-      - name: Show pyproject.toml
-        run: |
-          if [ -f pyproject.toml ]; then
-            echo "===== pyproject.toml ====="
-            cat pyproject.toml
-            echo "=========================="
-          else
-            echo "pyproject.toml not found" && exit 1
-          fi
+      - name: Build wheel and sdist
+        run: python -m build
 
-      - name: Build package
-        run: python -m build -s -w
-
-      - name: Upload artifact
-        if: success()
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: python-package
-          path: dist/
+          name: dist-artifact
+          path: dist/*
           if-no-files-found: error
