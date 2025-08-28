@@ -2,60 +2,62 @@ name: Promote Python Package
 
 on:
   repository_dispatch:
-    types: [package_synchronised]   # Triggered by Cloudsmith webhook
+    types: [package_synchronised]  # fired by Cloudsmith 'package.synced' webhook
 
 permissions:
   contents: read
-  id-token: write    # Required for OIDC
+  id-token: write    # for Cloudsmith OIDC
   actions: read
 
 env:
   CS_NAMESPACE: ${{ secrets.CS_NAMESPACE }}
   CS_STAGING_REPO: "staging"
   CS_PROD_REPO: "production"
+  READY_TAG: "ready-for-production"
 
 jobs:
   promote:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Authenticate to Cloudsmith (OIDC)
-        uses: cloudsmith-io/cloudsmith-cli-action@0.6.0
+      - name: Install Cloudsmith CLI (OIDC)
+        uses: cloudsmith-io/cloudsmith-cli-action@v1
         with:
-          oidc-namespace: ${{ secrets.CS_OIDC_NAMESPACE }}
-          oidc-service-slug: ${{ secrets.CS_OIDC_SERVICE_SLUG }}
-          install-cli: 'true'
+          oidc: true
 
-      - name: Verify Cloudsmith authentication
-        run: cloudsmith whoami
+      - name: Install jq (for JSON processing)
+        run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Tag package from webhook payload
-        env:
-          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+      - name: Show webhook payload (debug)
         run: |
-          echo "Received payload: $PAYLOAD"
-          pkg_name=$(echo $PAYLOAD | jq -r '.package_name // empty')
-          pkg_version=$(echo $PAYLOAD | jq -r '.package_version // empty')
-          pkg_slug=$(echo $PAYLOAD | jq -r '.package_slug // empty')
+          echo "slug=${{ github.event.client_payload.slug }}"
+          echo "name=${{ github.event.client_payload.name }}"
+          echo "version=${{ github.event.client_payload.version }}"
+          echo "format=${{ github.event.client_payload.format }}"
 
-          if [ -n "$pkg_slug" ]; then
-            echo "Tagging package by slug: $pkg_slug"
-            cloudsmith tags add "$CS_NAMESPACE/$CS_STAGING_REPO/$pkg_slug" ready-for-production
-          elif [ -n "$pkg_name" ] && [ -n "$pkg_version" ]; then
-            echo "Searching for $pkg_name@$pkg_version"
-            slug=$(cloudsmith ls pkg "$CS_NAMESPACE/$CS_STAGING_REPO" -q "name:${pkg_name} AND version:${pkg_version}" -F json | jq -r '.data[0].slug')
-            [ -n "$slug" ] && cloudsmith tags add "$CS_NAMESPACE/$CS_STAGING_REPO/$slug" ready-for-production
+      - name: Tag the synced package as ready-for-production
+        run: |
+          if [ -n "${{ github.event.client_payload.slug }}" ]; then
+            cloudsmith tags add \
+              "${CS_NAMESPACE}/${CS_STAGING_REPO}" \
+              "${{ github.event.client_payload.slug }}" \
+              "${READY_TAG}"
           else
-            echo "No valid package info in webhook payload"
-            exit 1
+            echo "No slug in payload; resolving by name/version..."
+            RESOLVED_SLUG=$(cloudsmith ls pkg "${CS_NAMESPACE}/${CS_STAGING_REPO}" -q "name:${{ github.event.client_payload.name }} AND version:${{ github.event.client_payload.version }}" -F json | jq -r '.data[0].slug')
+            if [ -z "$RESOLVED_SLUG" ] || [ "$RESOLVED_SLUG" = "null" ]; then
+              echo "Could not resolve package slug from payload"; exit 1
+            fi
+            cloudsmith tags add \
+              "${CS_NAMESPACE}/${CS_STAGING_REPO}" \
+              "$RESOLVED_SLUG" \
+              "${READY_TAG}"
           fi
 
-      - name: Promote tagged packages to production
+      - name: Promote all 'ready-for-production' packages from staging → production
         run: |
-          echo "Querying for packages with tag: ready-for-production"
-          cloudsmith ls pkg "$CS_NAMESPACE/$CS_STAGING_REPO" -q "tag:ready-for-production" -F json \
-            | jq -r '.data[] | "\(.namespace)/\(.repository)/\(.slug)"' \
-            | while read -r pkg; do
-                echo "Promoting $pkg -> $CS_NAMESPACE/$CS_PROD_REPO"
-                cloudsmith move "$pkg" "$CS_NAMESPACE/$CS_PROD_REPO"
-              done
+          cloudsmith ls pkg "${CS_NAMESPACE}/${CS_STAGING_REPO}" -q "tag:${READY_TAG}" -F json \
+          | jq -r '.data[] | .namespace + "/" + .repository + "/" + .slug' \
+          | while read -r pkgref; do
+              echo "Promoting $pkgref → ${CS_PROD_REPO}"
+              cloudsmith move "$pkgref" "${CS_PROD_REPO}"
+            done
