@@ -32,12 +32,14 @@ jobs:
           [ -n "${{ secrets.CS_OIDC_SERVICE_SLUG }}" ] || { echo "Missing secret: CS_OIDC_SERVICE_SLUG"; exit 1; }
 
       - name: Install Cloudsmith CLI (OIDC)
-  uses: cloudsmith-io/cloudsmith-cli-action@v1.0.4
-  with:
-    oidc-namespace: ${{ secrets.CS_OIDC_NAMESPACE }}
-    oidc-service-slug: ${{ secrets.CS_OIDC_SERVICE_SLUG }}
-    oidc-auth-retry: 3
+        uses: cloudsmith-io/cloudsmith-cli-action@v1.0.4
+        with:
+          oidc-namespace: ${{ secrets.CS_OIDC_NAMESPACE }}
+          oidc-service-slug: ${{ secrets.CS_OIDC_SERVICE_SLUG }}
+          oidc-auth-retry: 3
 
+      - name: Who am I (Cloudsmith)
+        run: cloudsmith whoami || true
 
       - name: Push Python package(s) to Cloudsmith staging
         run: |
@@ -46,3 +48,4 @@ jobs:
             echo "Pushing $pkg"
             cloudsmith push python "${{ secrets.CS_OIDC_NAMESPACE }}/${{ env.CS_STAGING_REPO }}" "$pkg"
           done
+
