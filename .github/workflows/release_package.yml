@@ -31,11 +31,12 @@ jobs:
       - name: List dist contents
         run: ls -la dist
 
-      - name: Authenticate to Cloudsmith via OIDC
-        uses: cloudsmith-io/cloudsmith-cli-action@main
-        with:
-          oidc-namespace: ${{ env.CLOUDSMITH_NAMESPACE }}
-          oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
+      
+- name: Authenticate to Cloudsmith via OIDC
+  uses: cloudsmith-io/cloudsmith-cli-action@v1.0.3
+  with:
+    oidc-namespace: ${{ env.CLOUDSMITH_NAMESPACE }}
+    oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
 
       - name: Push sdist and wheel to Cloudsmith (staging)
         shell: bash
