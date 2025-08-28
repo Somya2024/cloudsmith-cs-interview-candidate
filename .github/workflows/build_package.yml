@@ -1,3 +1,15 @@
+name: Build Python Package
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,10 +31,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: python-package   # must match in release_package.yml
+          name: python-package
           path: dist/
           if-no-files-found: error
-
-          path: dist/
-          if-no-files-found: error
-          retention-days: 5
