@@ -1,15 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "dummy_package"   # ✅ keep underscore
+name = "dummy_package"
 version = "0.1.0"
 description = "A dummy package for testing Cloudsmith upload"
 readme = "README.md"
+authors = [
+  { name = "Somya Lavania", email = "somyalavania3@gmail.com" }
+]
+license = { text = "MIT" }
 requires-python = ">=3.8"
-authors = [{ name = "Somya Lavania", email = "somyalavania3@gmail.com" }]
 classifiers = [
-  "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3"
 ]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/dummy_package"]
