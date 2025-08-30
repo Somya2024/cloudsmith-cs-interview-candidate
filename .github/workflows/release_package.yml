@@ -7,9 +7,9 @@ on:
       - completed
 
 env:
-  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
+  CLOUDSMITH_NAMESPACE: ${{ secrets.CS_OIDC_NAMESPACE }}
   CLOUDSMITH_REPOSITORY: "staging"
-  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
+  CLOUDSMITH_SERVICE_SLUG: ${{ secrets.CS_OIDC_SERVICE_SLUG }}
 
 permissions:
   contents: read
@@ -21,14 +21,11 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Download artifact from build workflow
-        uses: dawidd6/action-download-artifact@v2
+      - name: Download artifact
+        uses: actions/download-artifact@v4
         with:
-          workflow: build_package.yml
-          run_id: ${{ github.event.workflow_run.id }}
           name: python-package
           path: dist
-          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: List directory contents
         run: ls -la dist/
@@ -41,11 +38,8 @@ jobs:
         env:
           CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
         run: |
-          if ! ls dist/*.whl 1> /dev/null 2>&1; then
-            echo "No wheel package found to upload"
-            exit 1
-          fi
-          for file in dist/*.whl; do
+          shopt -s nullglob
+          for file in dist/*.tar.gz dist/*.whl; do
             echo "Uploading $file ..."
             cloudsmith push python \
               ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }} \
