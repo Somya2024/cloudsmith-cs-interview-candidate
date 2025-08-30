@@ -43,7 +43,14 @@ jobs:
         run: |
           echo "Namespace: ${{ env.CLOUDSMITH_NAMESPACE }}"
           echo "Repository: ${{ env.CLOUDSMITH_REPOSITORY }}"
-          echo "Files in dist:"
+          echo "Files in dist/:"
           ls -la dist/
-          cloudsmith push python ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }} dist/* --republish
+
+          for file in dist/*; do
+            echo "Uploading $file ..."
+            cloudsmith push python \
+              ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }} \
+              "$file" --republish
+          done
         shell: bash
+
