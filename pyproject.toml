@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "dummy_package"
+name = "dummy-package"  # Use hyphen here (matches artifact metadata)
 version = "0.1.0"
 description = "A dummy package for testing Cloudsmith upload"
 readme = "README.md"
