@@ -39,13 +39,11 @@ jobs:
 
       - name: Push package to Cloudsmith
         env:
-        CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
         run: |
-        echo "Namespace: ${{ env.CLOUDSMITH_NAMESPACE }}"
-        echo "Repository: ${{ env.CLOUDSMITH_REPOSITORY }}"
-        echo "Files in dist:"
-        ls -la dist/
-        cloudsmith push python ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }} dist/* --republish
+          echo "Namespace: ${{ env.CLOUDSMITH_NAMESPACE }}"
+          echo "Repository: ${{ env.CLOUDSMITH_REPOSITORY }}"
+          echo "Files in dist:"
+          ls -la dist/
+          cloudsmith push python ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }} dist/* --republish
         shell: bash
-
-
