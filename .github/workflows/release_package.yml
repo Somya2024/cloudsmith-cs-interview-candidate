@@ -13,7 +13,7 @@ env:
 
 permissions:
   contents: read
-  id-token: write   # required for OIDC (if configured)
+  id-token: write   # required for OIDC (if configured later)
 
 jobs:
   publish:
@@ -21,11 +21,6 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Debug: List artifacts from triggering workflow
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh run download ${{ github.event.workflow_run.id }} --dir dist
-
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
@@ -49,4 +44,3 @@ jobs:
           fi
           cloudsmith push python ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }} dist/*.tar.gz --republish
         shell: bash
-
