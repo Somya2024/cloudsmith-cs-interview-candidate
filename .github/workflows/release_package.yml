@@ -1,51 +1,47 @@
-name: Release to Cloudsmith (staging)
+name: Publish Python Package
 
 on:
   workflow_run:
     workflows: ["Build Python Package"]
-    types: [completed]
+    types:
+      - completed
+
+env:
+  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
+  CLOUDSMITH_REPOSITORY: "staging"
+  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
 
 permissions:
   contents: read
-  id-token: write      # required for OIDC to Cloudsmith
-  actions: read        # needed to read artifacts from another run
-
-env:
-  CS_STAGING_REPO: "staging"
+  id-token: write   # needed for OIDC (if configured)
 
 jobs:
-  release:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  publish:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
     steps:
-      - name: Download build artifact from triggering run
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: dist-artifact
+          name: python-package
           path: dist
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate OIDC inputs
+      - name: List directory contents
+        run: ls -la dist/
+        shell: bash
+
+      - name: Install Cloudsmith CLI
+        run: pip install --upgrade cloudsmith-cli
+
+      - name: Push package to Cloudsmith
+        env:
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
         run: |
-          [ -n "${{ secrets.CS_OIDC_NAMESPACE }}" ] || { echo "Missing secret: CS_OIDC_NAMESPACE"; exit 1; }
-          [ -n "${{ secrets.CS_OIDC_SERVICE_SLUG }}" ] || { echo "Missing secret: CS_OIDC_SERVICE_SLUG"; exit 1; }
-
-      - name: Install Cloudsmith CLI (OIDC)
-        uses: cloudsmith-io/cloudsmith-cli-action@v1.0.4
-        with:
-          oidc-namespace: ${{ secrets.CS_OIDC_NAMESPACE }}
-          oidc-service-slug: ${{ secrets.CS_OIDC_SERVICE_SLUG }}
-          oidc-auth-retry: 3
-
-      - name: Who am I (Cloudsmith)
-        run: cloudsmith whoami || true
-
-      - name: Push Python package(s) to Cloudsmith staging
-        run: |
-          shopt -s nullglob
-          for pkg in dist/*.whl dist/*.tar.gz; do
-            echo "Pushing $pkg"
-            cloudsmith push python "${{ secrets.CS_OIDC_NAMESPACE }}/${{ env.CS_STAGING_REPO }}" "$pkg"
-          done
+          if ! ls dist/*.tar.gz 1> /dev/null 2>&1; then
+            echo "No package found to upload"
+            exit 1
+          fi
+          cloudsmith push python ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }} dist/*.tar.gz --republish
+        shell: bash
 
