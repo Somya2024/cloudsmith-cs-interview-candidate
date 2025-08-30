@@ -2,14 +2,13 @@ name: Publish Python Package
 
 on:
   workflow_run:
-    workflows: ["Build Python Package"]
+    workflows: ["Build Python Package"] # must match build workflow name
     types:
       - completed
 
 env:
   CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
   CLOUDSMITH_REPOSITORY: "staging"
-  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
 
 permissions:
   contents: read
@@ -24,9 +23,8 @@ jobs:
       - name: Download artifact from build workflow
         uses: dawidd6/action-download-artifact@v2
         with:
-          workflow: build_package.yml
           run_id: ${{ github.event.workflow_run.id }}
-          name: python-package
+          name: python-package   # must match artifact name in build_package.yml
           path: dist
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
