@@ -21,11 +21,14 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
+      - name: Download artifact from build workflow
+        uses: dawidd6/action-download-artifact@v2
         with:
+          workflow: build_package.yml
+          run_id: ${{ github.event.workflow_run.id }}
           name: python-package
           path: dist
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: List directory contents
         run: ls -la dist/
