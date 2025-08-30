@@ -1,5 +1,9 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "dummy_package"   # ✅ use underscore, since filename has it
+name = "dummy_package"
 version = "0.1.0"
 description = "A dummy package for testing Cloudsmith upload"
 readme = "README.md"
@@ -11,3 +15,5 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/dummy_package"]
