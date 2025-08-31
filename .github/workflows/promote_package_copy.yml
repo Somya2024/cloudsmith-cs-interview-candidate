@@ -1,0 +1,86 @@
+name: Promote Python Package
+
+on:
+  repository_dispatch:
+    types: [package_synchronised]   # Triggered by Cloudsmith webhook
+
+permissions:
+  contents: read
+  id-token: write   # required for OIDC
+  actions: read
+
+env:
+  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
+  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
+  CLOUDSMITH_STAGING_REPO: "staging"
+  CLOUDSMITH_PROD_REPO: "production"
+  READY_TAG: "ready-for-production"
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Debug full webhook payload
+        run: |
+          echo "=== Webhook event payload received from Cloudsmith ==="
+          echo "${{ toJson(github.event) }}"
+          echo "======================================================"
+
+      - name: Install Cloudsmith CLI (OIDC)
+        uses: cloudsmith-io/cloudsmith-cli-action@v1.0.4
+        with:
+          oidc-namespace: ${{ env.CLOUDSMITH_NAMESPACE }}
+          oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
+
+      - name: Install jq (for JSON processing)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Resolve package slug (from payload or fallback)
+        id: resolve_slug
+        run: |
+          SLUG="${{ github.event.client_payload.slug }}"
+          NAME="${{ github.event.client_payload.name }}"
+          VERSION="${{ github.event.client_payload.version }}"
+
+          if [ -z "$SLUG" ] || [ "$SLUG" = "null" ]; then
+            echo "No slug in payload; resolving by name/version..."
+            QUERY=""
+            if [ -n "$NAME" ]; then
+              QUERY="name:$NAME"
+            fi
+            if [ -n "$VERSION" ]; then
+              if [ -n "$QUERY" ]; then
+                QUERY="$QUERY AND "
+              fi
+              QUERY="${QUERY}version:$VERSION"
+            fi
+            echo "Using query: $QUERY"
+            SLUG=$(cloudsmith ls pkg "${CLOUDSMITH_NAMESPACE}/${CLOUDSMITH_STAGING_REPO}" \
+              -q "$QUERY" -F json | jq -r '.data[0].slug')
+          fi
+
+          if [ -z "$SLUG" ] || [ "$SLUG" = "null" ]; then
+            echo " Could not resolve package slug from payload or query"
+            exit 1
+          fi
+
+          echo " Resolved slug: $SLUG"
+          echo "slug=$SLUG" >> $GITHUB_ENV
+
+      - name: Tag the synced package as ready-for-production
+        run: |
+          echo "Tagging ${slug} in ${CLOUDSMITH_NAMESPACE}/${CLOUDSMITH_STAGING_REPO}"
+          cloudsmith tags add "${CLOUDSMITH_NAMESPACE}/${CLOUDSMITH_STAGING_REPO}/${slug}" "${READY_TAG}"
+
+      - name: Promote all 'ready-for-production' packages from staging → production
+        run: |
+          echo "Checking for packages with tag ${READY_TAG} in ${CLOUDSMITH_NAMESPACE}/${CLOUDSMITH_STAGING_REPO}"
+          cloudsmith ls pkg "${CLOUDSMITH_NAMESPACE}/${CLOUDSMITH_STAGING_REPO}" -q "tag:${READY_TAG}" -F json \
+          | jq -r '.data[] | "\(.namespace)/\(.repository)/\(.slug)"' \
+          | while read -r pkgref; do
+              echo " Promoting $pkgref → ${CLOUDSMITH_PROD_REPO}"
+              cloudsmith copy --yes "$pkgref" "${CLOUDSMITH_PROD_REPO}"
+            done
+
+
