@@ -6,11 +6,12 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+  id-token: write   # required for OIDC
   actions: read
 
 env:
   CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
+  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
   CLOUDSMITH_STAGING_REPO: "staging"
   CLOUDSMITH_PROD_REPO: "production"
   READY_TAG: "ready-for-production"
@@ -60,11 +61,11 @@ jobs:
           fi
 
           if [ -z "$SLUG" ] || [ "$SLUG" = "null" ]; then
-            echo "Could not resolve package slug from payload or query"
+            echo " Could not resolve package slug from payload or query"
             exit 1
           fi
 
-          echo "Resolved slug: $SLUG"
+          echo " Resolved slug: $SLUG"
           echo "slug=$SLUG" >> $GITHUB_ENV
 
       - name: Tag the synced package as ready-for-production
@@ -76,6 +77,6 @@ jobs:
           cloudsmith ls pkg "${CLOUDSMITH_NAMESPACE}/${CLOUDSMITH_STAGING_REPO}" -q "tag:${READY_TAG}" -F json \
           | jq -r '.data[] | "\(.namespace)/\(.repository)/\(.slug)"' \
           | while read -r pkgref; do
-              echo "Promoting $pkgref → ${CLOUDSMITH_PROD_REPO}"
+              echo "🚀 Promoting $pkgref → ${CLOUDSMITH_PROD_REPO}"
               cloudsmith move "$pkgref" "${CLOUDSMITH_PROD_REPO}"
             done
