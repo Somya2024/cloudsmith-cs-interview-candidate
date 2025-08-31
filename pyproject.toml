@@ -4,18 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "example_package"
-version = "0.0.3"
-authors = [
-  { name="Somya Lavania", email="somyalavania3@gmail.com" },
-]
-description = "A small example package for Cloudsmith assessment"
+version = "0.0.4"
+description = "Example package for Cloudsmith assessment."
+authors = [{ name = "Somya Lavania", email = "somyalavania3@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.8"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
+license = { text = "MIT" }
+dependencies = []
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/example_package"]
