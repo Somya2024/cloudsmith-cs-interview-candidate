@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "example_package"
-version = "0.0.2"
+version = "0.0.3"
 authors = [
   { name="Somya Lavania", email="somyalavania3@gmail.com" },
 ]
@@ -18,4 +18,4 @@ classifiers = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["example_package"]
+packages = ["src/example_package"]
