@@ -74,7 +74,10 @@ jobs:
         run: |
           files=$(ls dist/*.tar.gz dist/*.whl 2>/dev/null || true)
           if [ -z "$files" ]; then
-            echo "No package found to upload"
-            exit 1
+          echo "No package found to upload"
+           exit 1
           fi
-          cloudsmith push python ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }} $files --republish
+          for file in $files; do
+           echo "Uploading $file..."
+          cloudsmith push python ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_REPOSITORY }} "$file" --republish
+          done
