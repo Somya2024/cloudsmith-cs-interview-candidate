@@ -70,13 +70,15 @@ jobs:
 
       - name: Tag the synced package as ready-for-production
         run: |
-          cloudsmith tags add "${CLOUDSMITH_NAMESPACE}/${CLOUDSMITH_STAGING_REPO}" "$slug" "${READY_TAG}"
+          echo "Tagging ${slug} in ${CLOUDSMITH_NAMESPACE}/${CLOUDSMITH_STAGING_REPO}"
+          cloudsmith tags add "${CLOUDSMITH_NAMESPACE}/${CLOUDSMITH_STAGING_REPO}/${slug}" "${READY_TAG}"
 
       - name: Promote all 'ready-for-production' packages from staging → production
         run: |
+          echo "Checking for packages with tag ${READY_TAG} in ${CLOUDSMITH_NAMESPACE}/${CLOUDSMITH_STAGING_REPO}"
           cloudsmith ls pkg "${CLOUDSMITH_NAMESPACE}/${CLOUDSMITH_STAGING_REPO}" -q "tag:${READY_TAG}" -F json \
           | jq -r '.data[] | "\(.namespace)/\(.repository)/\(.slug)"' \
           | while read -r pkgref; do
-              echo "🚀 Promoting $pkgref → ${CLOUDSMITH_PROD_REPO}"
+              echo " Promoting $pkgref → ${CLOUDSMITH_PROD_REPO}"
               cloudsmith move "$pkgref" "${CLOUDSMITH_PROD_REPO}"
             done
