@@ -80,6 +80,6 @@ jobs:
           | jq -r '.data[] | "\(.namespace)/\(.repository)/\(.slug)"' \
           | while read -r pkgref; do
               echo " Promoting $pkgref → ${CLOUDSMITH_PROD_REPO}"
-              cloudsmith copy "$pkgref" "${CLOUDSMITH_PROD_REPO}"
+              cloudsmith copy --republish "$pkgref" "${CLOUDSMITH_PROD_REPO}"
             done
 
