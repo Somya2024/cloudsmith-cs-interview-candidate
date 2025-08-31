@@ -3,17 +3,17 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "dummy_package"
-version = "0.0.1"
-description = "A dummy package for testing Cloudsmith upload"
+name = "dummy_package"                
+version = "0.0.1"                     
+description = "A small example package"
 readme = "README.md"
-authors = [
-  { name = "Somya Lavania", email = "somyalavania3@gmail.com" }
-]
-license = { text = "MIT" }
 requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+  { name="Example Author", email="author@example.com" },
+]
 classifiers = [
+  "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3"
 ]
